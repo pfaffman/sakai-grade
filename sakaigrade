@@ -1,0 +1,122 @@
+#!/bin/bash
+# sakaigrade -- Grade a Sakai downloads zip file
+# Jay Pfaffman <jay@pfaffman.com>
+# This code is far from ready for primetime, but it usually works for me.
+# Note: if assignment name contains a trailing space this won't work due to a bug in Sakai.
+
+START=`date +%s`
+FILE=bulk_download.zip
+GRADINGFILE=grading.html
+DOWNLOADS="~/Downloads"
+#OPEN=emacsclient # can use 'open' on mac to use default csv handler
+EDITOR=emacsclient
+BACKUPS="*~"
+WAIT="n" # change to "y" to wait for user to press return after editing
+
+SYSTEM=`uname -s`
+if [[ $SYSTEM == 'Linux' ]]
+then
+    OPEN=xdg-open
+    echo gnu
+    CUT=31-3000
+else
+    if [[ $SYSTEM == 'Darwin' ]]
+    then
+	OPEN=open # works on mac
+	CUT=29-3000
+    else
+	if [[ $OSTYPE == 'msys' ]]
+	then
+	    OPEN="/c/Program\ Files\ \(x86\)/Google/Chrome/Application/chrome.exe"
+	    EDITOR=vi
+	    if [ ! -f /c/Program\ Files/7-Zip/7z.exe ]
+	    then
+		echo This script needs 7-zip. Google and install it.
+		exit
+	    fi
+	else
+	    echo System unrecognized
+	fi
+    fi
+fi
+
+
+#NOWFILE=sakai`date +%Y-%m-%d-%H%M`.zip
+cd $DOWNLOADS
+if [ ! -f bulk_download.zip ]
+then
+    echo Cannot find bulk_download.zip
+    exit
+fi
+if [ -f $GRADINGFILE ]
+then
+    mv $GRADINGFILE $GRADINGFILE.bak
+fi 
+
+if [[ $OSTYPE == 'msys' ]]
+then
+    /c/Program\ Files/7-Zip/7z.exe x bulk_download.zip
+    DIR="`/c/Program\ Files/7-Zip/7z.exe  l  bulk_download.zip |head -16 | tail -1 | cut  -c 54-3000| cut -f 1 --delimiter=\\`"
+else # Not windows
+    unzip -o $FILE
+    DIR="`unzip -qqql bulk_download.zip |cut -c $CUT|cut -d/ -f 1|head -1`"
+fi
+echo cd to ----- $DIR
+cd "$DIR"
+
+for x in */*submissionText.html
+do
+    NAME=`echo $x | cut -d/ -f 1`
+    echo Processing $NAME 
+    printf  '\n<h2>'"$NAME"'</h2>\n' >> ../$GRADINGFILE 
+    cat "$x" >> ../$GRADINGFILE
+    set "$NAME/Submission attachment(s)"/*
+    for y
+    do
+	if [ -f "$y" ]
+	then
+	    printf '\n<a href="%s\">%s</a><br>\n' "$DIR/$y" "$y" >> ../$GRADINGFILE
+	fi
+    done
+done
+
+# replace bogus space character
+sed -ie 's/ / /g' ../$GRADINGFILE
+# make at least some dead links hot
+sed -ie 's/^http\(.*\)$/<a href="http\1">http\1"<\/a></g' ../$GRADINGFILE
+sed -ie 's/ http\(.*\)</<a href="http\1">http\1"<\/a></g' ../$GRADINGFILE
+sed -ie 's/^http\(.*\)</<a href="http\1">http\1"<\/a></g' ../$GRADINGFILE
+echo Opening $GRADINGFILE with $OPEN
+echo $OPEN $GRADINGFILE
+sleep 2
+$OPEN ../$GRADINGFILE &> /dev/null
+#$OPEN $GRADINGFILE &> /dev/null
+$EDITOR "grades.csv"
+
+if [ $WAIT == "y" ]
+then
+    if [[ $SYSTEM == 'Darwin' ]]
+    then
+	osascript -e 'tell app "Finder" to display dialog "Click OK when grading CSV is saved."' 
+    fi
+    echo Press return when CSV file is saved
+    read
+fi
+
+# delete backup files
+find . -name "$BACKUPS" -print0 |xargs -0 rm
+cd ..
+echo Creating "$DIR.zip" from "$DIR"
+if [[ $OSTYPE == 'msys' ]]
+then
+    /c/Program\ Files/7-Zip/7z.exe u -r bulk_download.zip "$DIR"
+else
+    zip -qr "$DIR.zip" "$DIR"
+fi
+echo Renaming bulk_download.zip to bulk_download.old
+sleep 2
+mv bulk_download.zip bulk_download.old
+ 
+STOP=`date +%s`
+ELAPSED=`echo \($STOP - $START\) | bc`
+echo $ELAPSED seconds to grade "$DIR!"

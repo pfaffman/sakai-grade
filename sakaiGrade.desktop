@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Sakai Grade
+GenericName=Grade a Sakai bulk_download.zip file
+Exec=~/bin/sakaigrade
+Icon=/home/pfaffman/bin/desktop/sakai_icon.ico
+Comment=Making offline grading easy for Normal People
+Terminal=True
+Type=Application
+Categories=education
+MimeType=application/x-sakai;
+X-SuSE-translate=true
