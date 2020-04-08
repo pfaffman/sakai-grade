@@ -1,6 +1,14 @@
 # sakai-grade
 Automate grading from a Sakai bulk_downloads.zip file
 
+
+## NOTE
+
+This code was last known to work in March 2016. It probably doesn't work anymore. If you have a budget, or can make a case that I should help you for free, please feel free to contact me. I can't promise that I'll be able to help, but it
+won't hurt to ask.
+
+## What was once true
+
 This works pretty well under Ubuntu Linux and MacOS. I have started
 trying to make it work under Windows with gitbash installed, but it
 has a long way to go. As of 2015-09-01 the big problem was that there
